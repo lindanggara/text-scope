@@ -3,21 +3,21 @@
 import { EMOTIONS, emotionInfo } from './emotions.js'
 
 const KEYWORDS = {
-  anger: ['kesel', 'kesal', 'marah', 'emosi', 'lambat', 'parah', 'jelek', 'mahal', 'nyebelin', 'kecewa berat', 'tolol'],
-  fear: ['takut', 'khawatir', 'cemas', 'ngeri', 'was-was', 'diretas', 'penipuan', 'tipu'],
-  joy: ['senang', 'seneng', 'makasih', 'terima kasih', 'mantap', 'puas', 'bagus', 'cepat', 'keren', 'lulus'],
-  love: ['sayang', 'cinta', 'kangen', 'rindu', 'suka banget', 'favorit'],
-  sad: ['sedih', 'kecewa', 'nangis', 'rusak', 'hilang', 'gagal', 'batal', 'sendiri'],
+  anger: ['kesel', 'kesal', 'marah', 'emosi', 'clickbait', 'settingan', 'lambat', 'parah', 'nyebelin', 'jelek', 'benci'],
+  fear: ['takut', 'khawatir', 'cemas', 'ngeri', 'merinding', 'seram', 'horor', 'diretas', 'penipuan', 'hoaks'],
+  joy: ['senang', 'seneng', 'makasih', 'mantap', 'seru', 'ngakak', 'kocak', 'lucu', 'keren', 'puas', 'relate'],
+  love: ['sayang', 'cinta', 'kangen', 'rindu', 'suka banget', 'idola', 'gemes', 'favorit'],
+  sad: ['sedih', 'kecewa', 'nangis', 'hilang', 'gagal', 'pamit', 'almarhum', 'sendiri'],
 }
 
 // Setiap topik punya kata kunci (dari NMF: kata dengan bobot tertinggi di topik itu).
 const TOPICS = {
-  anger: [['harga', ['mahal', 'naik terus']], ['pelayanan', ['cs lambat', 'nggak dibalas']], ['pengiriman', ['telat', 'kurir']], ['aplikasi', ['error', 'bug']], ['promo', ['syarat ribet']]],
-  fear: [['keamanan akun', ['diretas', 'kode otp']], ['pengembalian dana', ['refund', 'uang balik']], ['penipuan', ['tipu', 'curiga']], ['data pribadi', ['bocor']], ['pembayaran', ['terpotong']]],
-  joy: [['kecepatan', ['cepat sampai', 'kilat']], ['kualitas', ['puas', 'original']], ['pelayanan', ['ramah banget']], ['harga/promo', ['diskon', 'gratis ongkir']], ['kemudahan', ['gampang', 'praktis']]],
-  love: [['produk favorit', ['langganan', 'suka banget']], ['hadiah', ['kado', 'buat ibu']], ['toko', ['setia', 'terbaik']], ['kemasan', ['lucu', 'rapi']], ['pelayanan', ['perhatian']]],
-  sad: [['barang rusak', ['rusak', 'pecah']], ['pengembalian dana', ['refund lama']], ['pesanan batal', ['dibatalkan', 'stok habis']], ['pengiriman', ['hilang', 'nyasar']], ['ulasan', ['kecewa']]],
-  neutral: [['status pesanan', ['dikirim', 'diproses']], ['pertanyaan produk', ['ukuran', 'warna']], ['jadwal', ['hari senin', 'jam']], ['pembayaran', ['transfer']], ['alamat', ['ubah alamat']]],
+  anger: [['clickbait', ['judul', 'zonk']], ['admin', ['nggak dibalas', 'slow respon']], ['iklan', ['kebanyakan iklan']], ['live', ['dibatalin', 'telat']], ['drama', ['settingan']]],
+  fear: [['konten horor', ['merinding', 'seram']], ['akun', ['diretas', 'hack']], ['penipuan', ['giveaway palsu', 'link']], ['berita', ['hoaks']], ['masa depan', ['cemas']]],
+  joy: [['konten lucu', ['ngakak', 'kocak']], ['editan', ['rapi', 'keren']], ['lagu', ['enak', 'catchy']], ['giveaway', ['menang']], ['kreator', ['kreatif']]],
+  love: [['kreator', ['idola', 'panutan']], ['keluarga', ['ibu', 'ayah']], ['pasangan', ['couple', 'gemes']], ['hewan', ['kucing', 'lucu']], ['konten', ['favorit']]],
+  sad: [['ending', ['nangis', 'sedih']], ['kenangan', ['kangen', 'almarhum']], ['perpisahan', ['pamit', 'hiatus']], ['berita', ['musibah']], ['kegagalan', ['gagal']]],
+  neutral: [['pertanyaan', ['judul lagu', 'lokasi']], ['jadwal', ['kapan', 'part 2']], ['info produk', ['link', 'harga']], ['tag teman', ['tag']], ['request', ['konten selanjutnya']]],
 }
 
 // Angka acak yang selalu sama untuk teks yang sama.
@@ -106,4 +106,18 @@ export async function mockAnalyze({ rows, textColumn, privacyShield }) {
     insight,
     results,
   }
+}
+
+// Tiruan POST /predict untuk satu teks.
+export async function mockPredict(text) {
+  await new Promise((r) => setTimeout(r, 600))
+  const { emotion, confidence } = guessEmotion(text)
+  const rest = EMOTIONS.filter((e) => e !== emotion)
+  const weights = rest.map((e) => hash(text + e) + 0.1)
+  const sum = weights.reduce((a, b) => a + b, 0)
+  const probabilities = { [emotion]: Math.round(confidence * 10000) / 10000 }
+  rest.forEach((e, i) => { probabilities[e] = Math.round(((1 - confidence) * weights[i] / sum) * 10000) / 10000 })
+  const lower = text.toLowerCase()
+  const reasons = (KEYWORDS[emotion] ?? []).filter((k) => lower.includes(k)).slice(0, 3)
+  return { label: emotion, confidence, probabilities, reasons, text_anonymized: anonymize(text).text }
 }

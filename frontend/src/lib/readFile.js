@@ -2,9 +2,10 @@ import Papa from 'papaparse'
 import { readSheet } from 'read-excel-file/browser'
 
 export const MAX_FILE_MB = 10
-export const ACCEPTED_EXT = ['.csv', '.xlsx']
+export const MAX_ROWS = 5000 // samakan dengan MAX_ROWS di backend
+export const ACCEPTED_EXT = ['.csv', '.xlsx', '.txt']
 
-function extOf(name) {
+export function extOf(name) {
   const i = name.lastIndexOf('.')
   return i >= 0 ? name.slice(i).toLowerCase() : ''
 }
@@ -13,7 +14,7 @@ function extOf(name) {
 export function validateFile(file) {
   if (!file) return 'Belum ada file yang dipilih.'
   if (!ACCEPTED_EXT.includes(extOf(file.name))) {
-    return 'Format file tidak didukung. Gunakan file .csv atau .xlsx.'
+    return 'Format file tidak didukung. Gunakan file .csv, .xlsx, atau .txt.'
   }
   if (file.size > MAX_FILE_MB * 1024 * 1024) {
     return `Ukuran file melebihi ${MAX_FILE_MB} MB.`
@@ -48,6 +49,17 @@ async function readXlsx(file) {
   return { columns, rows }
 }
 
+// File .txt: setiap baris yang tidak kosong = satu teks.
+async function readTxt(file) {
+  const content = await file.text()
+  const rows = content
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((teks) => ({ teks }))
+  return { columns: ['teks'], rows }
+}
+
 // Tebak kolom teks: kolom dengan rata-rata panjang isi paling besar.
 function guessTextColumn(columns, rows) {
   const sample = rows.slice(0, 50)
@@ -62,9 +74,15 @@ function guessTextColumn(columns, rows) {
 
 // Membaca file .csv / .xlsx di browser untuk pratinjau dan pilihan kolom.
 export async function readDataFile(file) {
-  const parsed = extOf(file.name) === '.csv' ? await readCsv(file) : await readXlsx(file)
+  const ext = extOf(file.name)
+  const parsed = ext === '.csv' ? await readCsv(file) : ext === '.txt' ? await readTxt(file) : await readXlsx(file)
   if (!parsed.columns.length || !parsed.rows.length) {
     throw new Error('File kosong atau tidak memiliki baris data.')
+  }
+  if (parsed.rows.length > MAX_ROWS) {
+    throw new Error(
+      `File berisi ${parsed.rows.length.toLocaleString('id-ID')} baris, padahal maksimal ${MAX_ROWS.toLocaleString('id-ID')} komentar per analisis. Bagi file menjadi beberapa bagian, lalu analisis satu per satu.`,
+    )
   }
   return { ...parsed, suggestedColumn: guessTextColumn(parsed.columns, parsed.rows) }
 }

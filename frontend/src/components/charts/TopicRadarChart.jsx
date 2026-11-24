@@ -32,7 +32,7 @@ export default function TopicRadarChart({ topics, color, activeIndex, onSelect }
   }
 
   return (
-    <div className="h-[300px] w-full" role="img" aria-label={`Radar topik: ${topics.map((t) => t.topic).join(', ')}`}>
+    <div className="h-[270px] w-full" role="img" aria-label={`Radar topik: ${topics.map((t) => t.topic).join(', ')}`}>
       <ResponsiveContainer width="100%" height="100%">
         <RadarChart data={data} outerRadius="58%" margin={{ top: 16, right: 48, bottom: 16, left: 48 }}>
           <PolarGrid stroke="#E6E0F5" />
