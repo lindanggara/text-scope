@@ -1,0 +1,25 @@
+{
+  "active_model": "LogReg Tuned",
+  "description": "Logistic Regression dengan fitur TF-IDF kata + TF-IDF karakter, normalisasi kata gaul, dan class weighting. Hyperparameter dipilih dengan GridSearch (C = 1.0).",
+  "trained_by": "Linda",
+  "trained_at": "3 Nov 2026",
+  "metrics": {
+    "macro_f1_valid": 0.7312,
+    "macro_f1_test": 0.7286,
+    "macro_f1_emot": 0.4142,
+    "recall_emot": 0.3147
+  },
+  "confusion_matrix_image": "/model/confusion_matrix_logreg.png",
+  "comparison": [
+    { "model": "IndoBERTweet", "pj": "", "macro_f1_valid": 0.7999, "macro_f1_test": 0.7889, "macro_f1_emot": null },
+    { "model": "IndoBERT", "pj": "Chila", "macro_f1_valid": 0.7728, "macro_f1_test": 0.7707, "macro_f1_emot": 0.4166 },
+    { "model": "LogReg Tuned", "pj": "Linda", "macro_f1_valid": 0.7312, "macro_f1_test": 0.7286, "macro_f1_emot": 0.4142 },
+    { "model": "SVM Tuned", "pj": "Linda", "macro_f1_valid": 0.7265, "macro_f1_test": 0.7251, "macro_f1_emot": null },
+    { "model": "LogReg (baseline)", "pj": "Linda", "macro_f1_valid": 0.7176, "macro_f1_test": 0.7108, "macro_f1_emot": null }
+  ],
+  "notes": [
+    "Macro F1 test dihitung pada dataset utama; EmoT dipakai sebagai uji lintas domain (data Twitter).",
+    "Skor turun cukup jauh di EmoT, artinya model masih bergantung pada gaya bahasa data latih. Kelas sad dan joy paling terdampak.",
+    "Laporan prediksi salah yang diterima admin bisa diunduh sebagai data latih tambahan untuk melatih ulang model."
+  ]
+}

@@ -1,4 +1,4 @@
-import { emotionInfo, formatNumber } from '../../lib/emotions.js'
+import { emotionInfo, formatNumber, formatPercent } from '../../lib/emotions.js'
 
 // Donat buatan sendiri (SVG) supaya irisan yang dipilih bisa "menonjol" keluar.
 function arcPath(cx, cy, rOuter, rInner, start, end) {
@@ -56,7 +56,7 @@ export default function EmotionDonut({ data, active, onSelect, size = 240 }) {
         <span className="text-[11px] font-extrabold tracking-[0.12em] text-muted uppercase">Radar aktif</span>
         <span className="text-[26px] leading-tight font-black" style={{ color: info.color === '#EDA100' ? '#B87D00' : info.color }}>{info.nama}</span>
         <span className="text-[13px] font-semibold text-muted">
-          {formatNumber(activeData?.count ?? 0)} teks ({activeData?.percentage ?? 0}%)
+          {formatNumber(activeData?.count ?? 0)} komentar ({formatPercent(activeData?.percentage)}%)
         </span>
       </div>
     </div>

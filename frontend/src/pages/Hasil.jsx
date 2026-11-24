@@ -2,33 +2,33 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import EmotionDonut from '../components/charts/EmotionDonut.jsx'
 import TopicRadarChart from '../components/charts/TopicRadarChart.jsx'
-import { ChevronLeft, ChevronRight, Download, Gauge, Loader2, ShieldCheck, Smile, Sparkles, Text } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, Gauge, Loader2, ShieldCheck, Smile, Sparkles, Text, ArrowRight, TrendingUp, AlertTriangle } from 'lucide-react'
 import Owl from '../components/Owl.jsx'
-import { Card, Dot, EmotionChip, EmotionPill, PageHeader } from '../components/ui.jsx'
-import { EMOTIONS, emotionInfo, formatNumber, tint } from '../lib/emotions.js'
+import { Card, Dot, EmotionChip, EmotionPill, InfoTip, PageHeader } from '../components/ui.jsx'
+import { EMOTIONS, emotionInfo, formatNumber, formatPercent, LOW_CONFIDENCE, tint } from '../lib/emotions.js'
 import { exportResults } from '../lib/exportExcel.js'
+import { buildInsight } from '../lib/insight.js'
+import Kpi from '../components/Kpi.jsx'
+import ReportButton from '../components/ReportButton.jsx'
 import { useAnalysis } from '../context/AnalysisContext.jsx'
 
 const PAGE_SIZE = 10
 
-function Kpi({ bg, iconColor, icon: Icon, label, value, note }) {
+// Label kecil untuk prediksi yang keyakinannya rendah.
+function CheckBadge() {
   return (
-    <div className="flex flex-col gap-2 rounded-[26px] p-5" style={{ background: bg }}>
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-extrabold text-muted">{label}</span>
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-[15px] bg-white shadow-soft" style={{ color: iconColor }}>
-          <Icon size={22} aria-hidden="true" />
-        </span>
-      </div>
-      <span className="text-[32px] leading-tight font-black">{value}</span>
-      <span className="text-[13px] text-muted">{note}</span>
-    </div>
+    <span title="Keyakinan model rendah, sebaiknya dibaca ulang" className="inline-flex items-center gap-1 rounded-full bg-butter px-2 py-0.5 text-[12px] font-extrabold text-[#6B5200]">
+      <AlertTriangle size={12} aria-hidden="true" /> Perlu dicek
+    </span>
   )
 }
 
+
+
 export default function Hasil() {
   const { result } = useAnalysis()
-  const { summary, distribution, topics, insight, results, meta } = result
+  const { summary, distribution, topics, insight, results, meta, analysisId, saveError } = result
+  const detail = useMemo(() => buildInsight(result), [result])
 
   // Emosi aktif dipakai bersama oleh donat, daftar emosi, dan Topic Radar.
   const [activeEmotion, setActiveEmotion] = useState(summary.dominant_emotion ?? distribution[0].emotion)
@@ -50,9 +50,13 @@ export default function Hasil() {
   const dominant = emotionInfo(summary.dominant_emotion)
   const dominantPct = distribution.find((d) => d.emotion === summary.dominant_emotion)?.percentage ?? 0
 
+  const lowCount = useMemo(() => results.filter((r) => r.confidence < LOW_CONFIDENCE).length, [results])
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return results.filter((r) => (filter === 'all' || r.emotion === filter) && (!q || r.text.toLowerCase().includes(q)))
+    return results.filter((r) => {
+      const byFilter = filter === 'all' || (filter === 'check' ? r.confidence < LOW_CONFIDENCE : r.emotion === filter)
+      return byFilter && (!q || r.text.toLowerCase().includes(q))
+    })
   }, [results, filter, query])
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const current = Math.min(page, pageCount)
@@ -80,23 +84,50 @@ export default function Hasil() {
         </>}
       />
 
+      {saveError ? (
+        <p role="status" className="-mt-2 rounded-2xl bg-butter px-4 py-3 text-sm font-bold text-[#6B5200]">{saveError}</p>
+      ) : analysisId ? (
+        <p className="-mt-3 flex items-center gap-1.5 text-sm font-bold text-[#2E8A62]">
+          <ShieldCheck size={15} aria-hidden="true" /> Tersimpan di <Link to="/riwayat" className="text-primary">Riwayat</Link>
+        </p>
+      ) : null}
+
       <div className="flex flex-wrap items-stretch gap-5">
-        <section aria-label="Ringkasan otomatis" className="flex min-w-0 flex-[3_1_440px] flex-wrap items-center gap-5 rounded-[30px] bg-peach px-7 py-6">
-          <Owl size={140} />
-          <div className="flex min-w-0 flex-[1_1_240px] flex-col gap-2.5">
+        <section aria-label="Ringkasan otomatis" className="flex min-w-0 basis-full flex-wrap items-center gap-4 rounded-[30px] bg-peach px-5 py-5 sm:gap-6 sm:px-7 sm:py-6">
+          <Owl size={140} className="h-20 w-20 sm:h-[140px] sm:w-[140px]" />
+          <div className="flex min-w-0 flex-[1_1_320px] flex-col gap-3">
             <span className="flex items-center gap-1.5 self-start rounded-full bg-white px-3 py-1.5 text-[13px] font-black text-[#B4532A]">
               <Sparkles size={16} aria-hidden="true" /> Ringkasan otomatis
             </span>
-            <p className="text-[17px] leading-relaxed font-semibold text-[#4A3A45]">{insight}</p>
+            {detail.items.length ? (
+              <>
+                <ul className="flex flex-col gap-2">
+                  {detail.items.map((it) => (
+                    <li key={it.emotion} className="flex gap-2.5 text-[15px] leading-relaxed text-[#4A3A45]">
+                      <span className="mt-[7px] size-2.5 shrink-0 rounded-full" style={{ background: emotionInfo(it.emotion).color }} />
+                      <span>
+                        {it.pembuka}
+                        <b className="font-black text-ink">{it.label}</b>
+                        {it.rest}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                {detail.catatan && <p className="rounded-xl bg-white/70 px-3 py-2 text-sm font-bold text-[#4A3A45]">{detail.catatan}</p>}
+              </>
+            ) : (
+              <p className="text-[17px] leading-relaxed font-semibold text-[#4A3A45]">{insight}</p>
+            )}
           </div>
         </section>
-        <div className="grid min-w-0 flex-[4_1_480px] grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
-          <Kpi bg="#ECE6FB" iconColor="#6B5DC2" icon={Text} label="Total teks" value={formatNumber(summary.total_texts)} note="teks yang dianalisis" />
-          <Kpi bg="#FDE3E3" iconColor="#C93B3A" icon={Smile} label="Emosi dominan" value={dominant.nama} note={`${dominantPct}% dari seluruh teks`} />
-          <Kpi bg="#DFF3EA" iconColor="#2E8A62" icon={Gauge} label="Rata-rata keyakinan" value={`${Math.round(summary.avg_confidence * 100)}%`} note="semakin tinggi, semakin yakin" />
-          <Kpi bg="#FCE4EE" iconColor="#C2416F" icon={ShieldCheck} label="Data disensor" value={formatNumber(summary.censored_count)} note="username, telepon, NIM" />
+        <div className="grid min-w-0 basis-full grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          <Kpi bg="#ECE6FB" iconColor="#6B5DC2" icon={Text} label="Total komentar" count={summary.total_texts} note="komentar yang dianalisis" />
+          <Kpi bg="#FDE3E3" iconColor="#C93B3A" icon={Smile} label="Emosi dominan" value={dominant.nama} note={`${Number(dominantPct).toLocaleString('id-ID', { maximumFractionDigits: 1 })}% dari seluruh komentar`} />
+          <Kpi bg="#DFF3EA" iconColor="#2E8A62" icon={Gauge} label="Rata-rata keyakinan" tip={'Keyakinan = seberapa yakin model terhadap emosi yang dipilihnya (0–100%). Di bawah 50% ditandai Perlu dicek karena bisa saja keliru.'} count={Math.round(summary.avg_confidence * 100)} suffix="%" note="semakin tinggi, semakin yakin" />
+          <Kpi bg="#FCE4EE" iconColor="#C2416F" icon={ShieldCheck} label="Data disensor" count={summary.censored_count} note="username, telepon, NIM" />
         </div>
       </div>
+
 
       <div className="flex flex-wrap items-stretch gap-5">
         <Card className="flex min-w-0 flex-[1_1_440px] flex-col gap-5">
@@ -107,9 +138,9 @@ export default function Hasil() {
             </div>
             <span className="shrink-0 rounded-full bg-lilac px-3 py-1 text-[13px] font-extrabold text-primary">Interaktif</span>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-7">
+          <div className="flex flex-1 flex-wrap content-center items-center justify-center gap-7">
             <EmotionDonut data={distribution} active={activeEmotion} onSelect={selectEmotion} />
-            <ul className="flex min-w-0 flex-[1_1_230px] flex-col gap-1.5" aria-label="Pilih emosi">
+            <ul className="flex min-w-0 flex-[1_1_230px] flex-col gap-2" aria-label="Pilih emosi">
               {distribution.map((d) => {
                 const info = emotionInfo(d.emotion)
                 const isActive = d.emotion === activeEmotion
@@ -126,7 +157,7 @@ export default function Hasil() {
                         <Dot color={info.color} />
                         <span className={`flex-1 ${isActive ? 'font-black' : 'font-bold'}`}>{info.nama}</span>
                         <span className="text-sm font-bold">{formatNumber(d.count)}</span>
-                        <span className="w-14 text-right text-sm text-muted">({d.percentage}%)</span>
+                        <span className="w-14 text-right text-sm text-muted">({formatPercent(d.percentage)}%)</span>
                       </span>
                       <span className="block h-[6px] w-full overflow-hidden rounded-full bg-[#F0ECF8]">
                         <span className="block h-full rounded-full" style={{ width: `${(d.percentage / maxPct) * 100}%`, background: info.color }} />
@@ -137,8 +168,8 @@ export default function Hasil() {
               })}
             </ul>
           </div>
-          <div className="mt-auto flex justify-between gap-3 border-t border-line pt-4 text-[13px] text-muted">
-            <span>{formatNumber(summary.total_texts)} teks dianalisis</span>
+          <div className="flex justify-between gap-3 border-t border-line pt-4 text-[13px] text-muted">
+            <span>{formatNumber(summary.total_texts)} komentar dianalisis</span>
             <span>6 kategori emosi</span>
           </div>
         </Card>
@@ -151,8 +182,9 @@ export default function Hasil() {
                 <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[15px] font-black" style={{ background: tint(activeEmotion, '2E') }}>
                   <Dot color={activeInfo.color} />{activeInfo.nama}
                 </span>
+                <InfoTip label="Apa itu Topic Radar?" text={'"""+TIP_TOPIC+"""'} />
               </h2>
-              <p className="mt-1 text-sm text-muted">Topik dan kata kunci pemicu utama emosi <b className="text-ink">{activeInfo.nama}</b> · {formatNumber(countOf[activeEmotion] ?? 0)} teks</p>
+              <p className="mt-1 text-sm text-muted">Kelompok kata yang paling sering muncul di komentar <b className="text-ink">{activeInfo.nama.toLowerCase()}</b> · {formatNumber(countOf[activeEmotion] ?? 0)} komentar</p>
             </div>
             <div role="group" aria-label="Pilih emosi" className="flex gap-1">
               {EMOTIONS.map((e) => {
@@ -199,7 +231,7 @@ export default function Hasil() {
 
           {topicList.length > 0 && (
             <div className="flex flex-col gap-2.5">
-              <span className="text-[13px] font-extrabold tracking-wide text-muted uppercase">Topik &amp; kata kuncinya</span>
+              <span className="flex items-center gap-1 text-[13px] font-extrabold tracking-wide text-muted uppercase">Kata yang sering muncul bersama <InfoTip label="Apa itu topik dan skor?" text={'Topik dicari otomatis dari komentar dengan emosi ini. Setiap topik adalah kelompok kata yang sering muncul bersama, jadi namanya diambil dari 2 kata terkuat, bukan judul buatan manusia. Skor = porsi komentar emosi ini yang paling banyak membahas topik tersebut. Contoh 0,42 berarti sekitar 42% komentar.'} align="right" /></span>
               <ul className="flex flex-col gap-2">
                 {topicList.map((t, i) => {
                   const isActive = i === activeTopic
@@ -210,7 +242,7 @@ export default function Hasil() {
                         type="button"
                         aria-pressed={isActive}
                         onClick={() => setActiveTopic(i)}
-                        className="flex w-full cursor-pointer flex-col gap-2 rounded-2xl px-3.5 py-3 text-left transition"
+                        className="flex w-full cursor-pointer flex-col gap-1.5 rounded-2xl px-3.5 py-2.5 text-left transition hover:brightness-[0.98]"
                         style={{
                           background: isActive ? tint(activeEmotion, '1F') : '#F7F4FC',
                           boxShadow: isActive ? `inset 0 0 0 2px ${activeInfo.color}` : 'none',
@@ -225,9 +257,9 @@ export default function Hasil() {
                           <span className="w-12 text-right text-[13px] font-bold text-muted">{t.score.toFixed(2)}</span>
                         </span>
                         {t.keywords?.length > 0 && (
-                          <span className="flex flex-wrap gap-1.5 pl-10">
+                          <span className="flex flex-wrap gap-1 pl-10">
                             {t.keywords.map((k) => (
-                              <span key={k} className="rounded-lg bg-white px-2.5 py-1 text-sm font-semibold">
+                              <span key={k} className="rounded-lg bg-white px-2 py-0.5 text-[13px] font-semibold">
                                 <span className="text-muted">#</span> {k}
                               </span>
                             ))}
@@ -243,20 +275,33 @@ export default function Hasil() {
         </Card>
       </div>
 
+      <Link to="/sosial" className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] bg-lilac px-5 py-4 no-underline transition hover:brightness-[0.98]">
+        <span className="flex items-center gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-[14px] bg-white text-primary"><TrendingUp size={20} aria-hidden="true" /></span>
+          <span>
+            <span className="block font-black text-ink">Lihat Tren & Sosial</span>
+            <span className="block text-sm text-muted">
+              {meta?.timeColumn || meta?.likesColumn ? 'Kapan emosi muncul, komentar paling disukai, serta emoji dan hashtag.' : 'Emoji dan hashtag per emosi. Pilih kolom waktu atau likes saat upload untuk melihat tren dan komentar terpopuler.'}
+            </span>
+          </span>
+        </span>
+        <ArrowRight size={20} className="text-primary" aria-hidden="true" />
+      </Link>
+
       <Card className="flex flex-col gap-4">
         <div className="flex flex-wrap items-end justify-between gap-3.5">
           <div>
-            <h2 className="text-xl font-black">Detail per teks</h2>
-            <p className="mt-1 text-sm text-muted">Hasil prediksi untuk setiap baris data</p>
+            <h2 className="text-xl font-black">Detail per komentar</h2>
+            <p className="mt-1 text-sm text-muted">Hasil prediksi untuk setiap komentar</p>
           </div>
           <div className="flex min-w-[220px] flex-[0_1_300px] flex-col gap-1">
-            <label htmlFor="cari" className="text-[13px] font-extrabold text-muted">Cari teks</label>
+            <label htmlFor="cari" className="text-[13px] font-extrabold text-muted">Cari komentar</label>
             <input
               id="cari"
               type="search"
               value={query}
               onChange={(e) => { setQuery(e.target.value); setPage(1) }}
-              placeholder="mis. ongkir, refund…"
+              placeholder="mis. editan, lagu, endorse…"
               className="min-h-[46px] rounded-full border-[1.5px] border-[#D6CCF4] bg-page px-4"
             />
           </div>
@@ -266,26 +311,59 @@ export default function Hasil() {
           {EMOTIONS.map((e) => (
             <EmotionPill key={e} label={emotionInfo(e).nama} color={emotionInfo(e).color} active={filter === e} onClick={() => { setFilter(e); setPage(1) }} />
           ))}
+          {lowCount > 0 && (
+            <span className="inline-flex items-center gap-1">
+              <EmotionPill label={`Perlu dicek (${lowCount})`} color="#C98A00" active={filter === 'check'} onClick={() => { setFilter('check'); setPage(1) }} />
+              <InfoTip label="Apa itu Perlu dicek?" text={'Komentar dengan keyakinan di bawah 50%. Bisa jadi sarkas, terlalu pendek, atau berisi lebih dari satu emosi, jadi sebaiknya dibaca ulang.'} align="right" />
+            </span>
+          )}
         </div>
-        <div className="overflow-x-auto rounded-[18px] border border-line">
+        <ul className="flex flex-col gap-2.5 sm:hidden">
+          {rows.length === 0 && <li className="rounded-2xl bg-page px-4 py-6 text-center font-semibold text-muted">Tidak ada komentar yang cocok.</li>}
+          {rows.map((r) => (
+            <li key={r.id} className="flex flex-col gap-2.5 rounded-2xl bg-page p-3.5">
+              <p className="text-[15px] leading-relaxed">{r.text}</p>
+              {r.confidence < LOW_CONFIDENCE && <span><CheckBadge /></span>}
+              <div className="flex items-center gap-3">
+                <EmotionChip emotion={r.emotion} />
+                <div className="h-2 flex-1 overflow-hidden rounded-full bg-white">
+                  <div className="h-full rounded-full bg-primary" style={{ width: `${r.confidence * 100}%` }} />
+                </div>
+                <span className="w-10 text-right text-sm font-extrabold">{Math.round(r.confidence * 100)}%</span>
+              </div>
+              <div className="-mb-1 flex justify-end">
+                <ReportButton compact text={r.text} predicted={r.emotion} confidence={r.confidence} source="file" analysisId={analysisId} />
+              </div>
+            </li>
+          ))}
+        </ul>
+        <div className="hidden overflow-x-auto rounded-[18px] border border-line sm:block">
           <table className="w-full min-w-[680px] border-collapse text-[15px]">
             <thead>
               <tr className="bg-page text-left text-muted">
                 <th className="w-14 px-4 py-3 font-extrabold">No</th>
-                <th className="px-4 py-3 font-extrabold">Teks</th>
-                <th className="w-36 px-4 py-3 font-extrabold">Emosi</th>
-                <th className="w-48 px-4 py-3 font-extrabold">Keyakinan</th>
+                <th className="px-4 py-3 font-extrabold">Komentar</th>
+                <th className="w-40 px-4 py-3 font-extrabold">Emosi</th>
+                <th className="w-48 px-4 py-3 font-extrabold"><span className="inline-flex items-center gap-1">Keyakinan <InfoTip label="Apa itu keyakinan?" text={'Keyakinan = seberapa yakin model terhadap emosi yang dipilihnya (0–100%). Di bawah 50% ditandai Perlu dicek karena bisa saja keliru.'} align="right" /></span></th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 && (
-                <tr><td colSpan={4} className="px-4 py-8 text-center font-semibold text-muted">Tidak ada teks yang cocok.</td></tr>
+                <tr><td colSpan={4} className="px-4 py-8 text-center font-semibold text-muted">Tidak ada komentar yang cocok.</td></tr>
               )}
               {rows.map((r) => (
                 <tr key={r.id} className="border-t border-[#F0ECF8]">
                   <td className="px-4 py-3.5 text-muted">{r.id}</td>
-                  <td className="px-4 py-3.5 leading-snug">{r.text}</td>
-                  <td className="px-4 py-3.5"><EmotionChip emotion={r.emotion} /></td>
+                  <td className="px-4 py-3.5 leading-snug">
+                    {r.text}
+                    {r.confidence < LOW_CONFIDENCE && <span className="ml-2 align-middle"><CheckBadge /></span>}
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <div className="flex flex-col items-start gap-1">
+                      <EmotionChip emotion={r.emotion} />
+                      <ReportButton compact text={r.text} predicted={r.emotion} confidence={r.confidence} source="file" analysisId={analysisId} />
+                    </div>
+                  </td>
                   <td className="px-4 py-3.5">
                     <div className="flex items-center gap-2.5">
                       <div className="h-[9px] flex-1 overflow-hidden rounded-full bg-[#F0ECF8]">
@@ -301,7 +379,7 @@ export default function Hasil() {
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span className="text-sm text-muted">
-            {filtered.length ? `Menampilkan ${(current - 1) * PAGE_SIZE + 1}–${(current - 1) * PAGE_SIZE + rows.length} dari ${formatNumber(filtered.length)} teks` : '0 teks'}
+            {filtered.length ? `Menampilkan ${(current - 1) * PAGE_SIZE + 1}–${(current - 1) * PAGE_SIZE + rows.length} dari ${formatNumber(filtered.length)} komentar` : '0 komentar'}
           </span>
           <div className="flex items-center gap-2">
             <button type="button" aria-label="Halaman sebelumnya" disabled={current <= 1} onClick={() => setPage(current - 1)} className="flex size-11 cursor-pointer items-center justify-center rounded-full bg-lilac text-primary disabled:cursor-not-allowed disabled:opacity-40">

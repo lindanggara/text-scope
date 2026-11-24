@@ -1,4 +1,5 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { useAuth } from './AuthContext.jsx'
 
 const AnalysisContext = createContext(null)
 const STORAGE_KEY = 'textscope:result'
@@ -16,6 +17,19 @@ function loadSaved() {
 
 export function AnalysisProvider({ children }) {
   const [result, setResultState] = useState(loadSaved)
+  const { user, loading } = useAuth()
+  const lastUser = useRef(undefined)
+
+  // Hasil milik satu akun tidak boleh terlihat oleh akun lain di browser yang sama.
+  useEffect(() => {
+    if (loading) return
+    const id = user?.id ?? null
+    if (lastUser.current !== undefined && lastUser.current !== id) {
+      setResultState(null)
+      try { sessionStorage.removeItem(STORAGE_KEY) } catch { /* abaikan */ }
+    }
+    lastUser.current = id
+  }, [user, loading])
 
   function setResult(next) {
     setResultState(next)

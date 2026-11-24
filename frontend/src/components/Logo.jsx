@@ -30,7 +30,7 @@ export default function Logo({ size = 32, tagline = false, light = false }) {
         <span style={{ color: accent }}>pe</span>
       </span>
       {tagline && (
-        <span className="text-xs font-extrabold tracking-wide text-muted">Analisis emosi teks</span>
+        <span className="text-xs font-extrabold tracking-wide text-muted">Analisis emosi komentar</span>
       )}
     </span>
   )
