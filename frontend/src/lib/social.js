@@ -134,7 +134,7 @@ export function topLiked(results, emotion, n = 3) {
 }
 
 // ---------- Emoji & hashtag ----------
-const EMOJI_RE = /\p{Extended_Pictographic}(?:️|‍\p{Extended_Pictographic})*/gu
+const EMOJI_RE = /\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*/gu
 const HASHTAG_RE = /#[\p{L}\p{N}_]{2,}/gu
 
 function countMatches(texts, re, lower = false) {

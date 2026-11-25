@@ -99,7 +99,9 @@ export default function SocialInsights({ results, meta, activeEmotion, onSelectE
           <Card className="flex min-w-0 flex-[1_1_440px] flex-col gap-4">
             <SectionTitle icon={Heart} title={`Komentar ${nama} paling disukai`} subtitle="Diurutkan dari jumlah likes terbanyak" />
             {liked.length === 0 ? (
-              <p className="rounded-2xl bg-page px-4 py-6 text-center font-semibold text-muted">Belum ada komentar {nama} yang punya data likes.</p>
+              <p className="rounded-2xl border border-dashed border-line bg-page/70 px-4 py-6 text-center text-sm font-semibold text-muted">
+                Belum ada komentar {nama} yang punya data likes.
+              </p>
             ) : (
               <ol className="flex flex-col gap-2.5">
                 {liked.map((r, i) => (
@@ -112,6 +114,11 @@ export default function SocialInsights({ results, meta, activeEmotion, onSelectE
                           <Heart size={14} fill="currentColor" aria-hidden="true" /> {formatNumber(r.likes)} likes
                         </span>
                         {r.time && <span>{formatTime(r.time)}</span>}
+                        {typeof r.confidence === 'number' && (
+                          <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-extrabold text-primary">
+                            Keyakinan {Math.round(r.confidence * 100)}%
+                          </span>
+                        )}
                       </p>
                     </div>
                   </li>
@@ -134,7 +141,11 @@ export default function SocialInsights({ results, meta, activeEmotion, onSelectE
                   </span>
                 ))}
               </div>
-            ) : <p className="text-sm text-muted">Tidak ada emoji di komentar {nama}.</p>}
+            ) : (
+              <p className="rounded-2xl border border-dashed border-line bg-page/70 px-4 py-3 text-sm font-medium text-muted">
+                Tidak ada emoji di komentar {nama}.
+              </p>
+            )}
           </div>
           <div className="flex flex-col gap-2">
             <span className="text-[13px] font-extrabold tracking-wide text-muted uppercase">Hashtag</span>
@@ -146,7 +157,11 @@ export default function SocialInsights({ results, meta, activeEmotion, onSelectE
                   </span>
                 ))}
               </div>
-            ) : <p className="text-sm text-muted">Tidak ada hashtag di komentar {nama}.</p>}
+            ) : (
+              <p className="rounded-2xl border border-dashed border-line bg-page/70 px-4 py-3 text-sm font-medium text-muted">
+                Tidak ada hashtag di komentar {nama}.
+              </p>
+            )}
           </div>
         </Card>
       </div>
