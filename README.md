@@ -418,3 +418,32 @@ Tahapan utama pengembangan TextScope telah mencakup:
 **TextScope — Indonesian Emotion Classification and Analysis System**
 
 Developed as part of the Project Sistem Cerdas course, Applied Data Science Program, Electronic Engineering Polytechnic Institute of Surabaya (PENS).
+
+## Continuous Retraining (Human-in-the-Loop)
+
+TextScope menyediakan pipeline retraining melalui `src/retrain_pipeline.py`.
+Admin dapat mengekspor koreksi prediksi dalam format CSV dengan kolom `text`
+dan `label`, kemudian menggunakan data tersebut untuk melatih ulang model.
+
+Contoh penggunaan:
+
+```powershell
+python src/retrain_pipeline.py --feedback data_latih_tambahan_2026-11-25.csv --model logreg_tuned
+```
+
+Untuk model Transformer:
+
+```powershell
+python src/retrain_pipeline.py --feedback data_latih_tambahan_2026-11-25.csv --model indobertweet --epochs 1
+```
+
+Simulasi tanpa menerapkan perubahan:
+
+```powershell
+python src/retrain_pipeline.py --feedback data_latih_tambahan_2026-11-25.csv --model logreg_tuned --dry-run
+```
+
+Pipeline memvalidasi data, melakukan deduplikasi, melatih model, dan mengevaluasi
+Macro F1. Safe Deployment Gate hanya mengizinkan promosi apabila skor Macro F1
+Test baru tidak lebih rendah daripada skor model sebelumnya. Hasil retraining
+dicatat pada `reports/results/retrain_log.csv`.
