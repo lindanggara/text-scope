@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Eye, EyeOff, Loader2, MailCheck, Settings } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Eye, EyeOff, Loader2, MailCheck, Settings } from 'lucide-react'
 import Logo from '../components/Logo.jsx'
 import Owl from '../components/Owl.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { pesanError } from '../lib/supabase.js'
 
 const MIN_PASSWORD = 8
-const INPUT = 'min-h-12 w-full rounded-2xl border-2 border-line bg-white px-4 text-base font-semibold outline-none transition focus:border-primary'
+const INPUT = 'min-h-12 w-full rounded-2xl border-2 border-line bg-white px-4 text-base font-semibold outline-none transition placeholder:font-normal placeholder:text-muted/55 focus:border-primary'
 
 function Field({ label, id, children, hint }) {
   return (
@@ -21,26 +21,45 @@ function Field({ label, id, children, hint }) {
 
 function PasswordInput({ id, value, onChange, autoComplete }) {
   const [show, setShow] = useState(false)
+  const [capsLock, setCapsLock] = useState(false)
+
+  function checkCaps(e) {
+    if (typeof e.getModifierState === 'function') {
+      setCapsLock(e.getModifierState('CapsLock'))
+    }
+  }
+
   return (
-    <div className="relative">
-      <input
-        id={id}
-        type={show ? 'text' : 'password'}
-        required
-        minLength={MIN_PASSWORD}
-        autoComplete={autoComplete}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={`${INPUT} pr-12`}
-      />
-      <button
-        type="button"
-        onClick={() => setShow((s) => !s)}
-        aria-label={show ? 'Sembunyikan password' : 'Tampilkan password'}
-        className="absolute top-1/2 right-2 flex size-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-xl text-muted hover:bg-lilac"
-      >
-        {show ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
-      </button>
+    <div className="flex flex-col gap-1.5">
+      <div className="relative">
+        <input
+          id={id}
+          type={show ? 'text' : 'password'}
+          required
+          minLength={MIN_PASSWORD}
+          autoComplete={autoComplete}
+          placeholder="••••••••"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyUp={checkCaps}
+          onKeyDown={checkCaps}
+          onBlur={() => setCapsLock(false)}
+          className={`${INPUT} pr-12`}
+        />
+        <button
+          type="button"
+          onClick={() => setShow((s) => !s)}
+          aria-label={show ? 'Sembunyikan password' : 'Tampilkan password'}
+          className="absolute top-1/2 right-2 flex size-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-xl text-muted hover:bg-lilac"
+        >
+          {show ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+        </button>
+      </div>
+      {capsLock && (
+        <p className="text-xs font-bold text-[#B57B00]">
+          Caps Lock sedang aktif. Pastikan huruf besar/kecil password sesuai.
+        </p>
+      )}
     </div>
   )
 }
@@ -116,21 +135,41 @@ export default function Masuk() {
   const title = { masuk: 'Masuk ke TextScope', daftar: 'Buat akun baru', lupa: 'Lupa password' }[mode]
   const button = { masuk: 'Masuk', daftar: 'Daftar', lupa: 'Kirim link reset' }[mode]
 
+  const highlights = [
+    'Riwayat analisis tersimpan otomatis di akunmu',
+    'Hanya kamu yang bisa melihat data analisis milikmu',
+    'Laporkan prediksi keliru untuk membantu evaluasi model',
+  ]
+
   return (
     <div className="flex min-h-screen flex-col bg-page">
       <header className="mx-auto flex w-full max-w-[1100px] items-center justify-between px-4 py-4 sm:px-8">
         <Link to="/" aria-label="TextScope, ke halaman utama" className="no-underline"><Logo size={30} /></Link>
-        <Link to="/panduan" className="flex min-h-11 items-center rounded-full px-4 font-extrabold text-[#4A4360] no-underline hover:bg-white">Panduan</Link>
+        <div className="flex items-center gap-1.5">
+          <Link to="/" className="flex min-h-11 items-center rounded-full px-4 font-extrabold text-muted no-underline transition hover:bg-white hover:text-ink">
+            Beranda
+          </Link>
+          <Link to="/panduan" className="flex min-h-11 items-center rounded-full px-4 font-extrabold text-[#4A4360] no-underline transition hover:bg-white">
+            Panduan
+          </Link>
+        </div>
       </header>
 
       <main className="mx-auto flex w-full max-w-[1100px] flex-1 items-center gap-10 px-4 pb-10 sm:px-8">
-        <section className="hidden flex-1 flex-col gap-4 lg:flex">
+        <section className="hidden flex-1 flex-col gap-5 lg:flex">
           <Owl size={200} />
-          <h2 className="text-4xl leading-tight font-black tracking-tight">Pahami emosi di balik komentar audiensmu.</h2>
-          <ul className="flex flex-col gap-2 text-[17px] text-muted">
-            <li>• Riwayat analisis tersimpan di akunmu</li>
-            <li>• Hanya kamu yang bisa melihat datamu</li>
-            <li>• Laporkan hasil yang keliru untuk bantu memperbaiki model</li>
+          <h2 className="text-4xl leading-tight font-black tracking-tight text-ink">
+            Pahami emosi di balik komentar audiensmu.
+          </h2>
+          <ul className="flex flex-col gap-3 text-[16px] font-medium text-muted">
+            {highlights.map((item) => (
+              <li key={item} className="flex items-center gap-3">
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-lilac text-primary">
+                  <CheckCircle2 size={16} aria-hidden="true" />
+                </span>
+                <span>{item}</span>
+              </li>
+            ))}
           </ul>
         </section>
 
@@ -170,12 +209,30 @@ export default function Masuk() {
           ) : (
             <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate={false}>
               {mode === 'daftar' && (
-                <Field label="Nama" id="nama">
-                  <input id="nama" required maxLength={80} autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className={INPUT} />
+                <Field label="Nama lengkap" id="nama">
+                  <input
+                    id="nama"
+                    required
+                    maxLength={80}
+                    autoComplete="name"
+                    placeholder="Contoh: Linda Anggara"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className={INPUT}
+                  />
                 </Field>
               )}
               <Field label="Email" id="email">
-                <input id="email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={INPUT} />
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  placeholder="nama@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={INPUT}
+                />
               </Field>
               {mode !== 'lupa' && (
                 <Field label="Password" id="password" hint={mode === 'daftar' ? `Minimal ${MIN_PASSWORD} karakter.` : undefined}>
