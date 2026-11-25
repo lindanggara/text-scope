@@ -1,7 +1,7 @@
 // Semua akses ke database Supabase dikumpulkan di sini.
 // Hak akses (siapa boleh lihat/ubah apa) dijaga oleh aturan RLS di supabase/schema.sql,
 // jadi fungsi-fungsi ini aman walau dipanggil dari browser.
-import { supabase } from './supabase.js'
+import { createIsolatedClient, supabase } from './supabase.js'
 
 function check({ data, error }) {
   if (error) throw error
@@ -85,6 +85,26 @@ export async function adminListUsers() {
   return check(await supabase.rpc('admin_list_users'))
 }
 
+export async function adminCreateUser({ email, password, full_name, role = 'pengguna' }) {
+  const tempClient = createIsolatedClient()
+  if (!tempClient) throw new Error('Konfigurasi Supabase belum siap.')
+  const { data, error } = await tempClient.auth.signUp({
+    email: email.trim(),
+    password,
+    options: {
+      data: { full_name: full_name.trim() },
+    },
+  })
+  if (error) throw error
+  const newId = data?.user?.id
+  if (newId) {
+    await supabase
+      .from('profiles')
+      .update({ full_name: full_name.trim(), role })
+      .eq('id', newId)
+  }
+  return data
+}
 export async function adminUpdateUser(id, changes) {
   check(await supabase.from('profiles').update(changes).eq('id', id))
 }

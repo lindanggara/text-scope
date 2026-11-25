@@ -1,5 +1,5 @@
 {
-    "aktif":  "logreg_tuned",
+    "aktif":  "indobert",
     "model":  {
                   "logreg_baseline":  {
                                           "nama":  "LogReg Baseline",
@@ -40,6 +40,14 @@
                                    "f1_test":  0.7707,
                                    "f1_emot":  0.4166,
                                    "deskripsi":  "Fine-tuned indobenchmark/indobert-base-p1 (max_length 128)"
-                               }
+                               },
+                  "indobertweet":  {
+                                       "nama":  "IndoBERTweet",
+                                       "tipe":  "transformer",
+                                       "path":  "models/indobertweet",
+                                       "f1_test":  0.7889,
+                                       "f1_emot":  null,
+                                       "deskripsi":  "Fine-tuned indolem/indobertweet-base-uncased untuk teks media sosial"
+                                   }
               }
 }

@@ -8,6 +8,13 @@ const key = import.meta.env.VITE_SUPABASE_ANON_KEY ?? ''
 
 export const SUPABASE_READY = Boolean(url && key)
 
+export function createIsolatedClient() {
+  if (!SUPABASE_READY) return null
+  return createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  })
+}
+
 export const supabase = SUPABASE_READY
   ? createClient(url, key, {
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
