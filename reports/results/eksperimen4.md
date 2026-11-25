@@ -20,7 +20,8 @@ Catatan semua percobaan model. **Jangan hapus baris lama**, tambahkan baris baru
 | Tanggal | Model | PJ | Data | Perubahan | Macro F1 (valid) | Macro F1 (test) | Catatan |
 |---|---|---|---|---|---:|---:|---|
 | 17 Nov 2026 | IndoBERT | Chila | train v1 (70/15/15) | Fine-tuning `indobenchmark/indobert-base-p1`, MAX_LENGTH=128, BATCH_SIZE=4, EPOCHS=1, LR=2e-5 | 0.7728 | 0.7707 | Training CPU selama 87 menit 24 detik |
-| 19 Nov 2026 | IndoBERTweet | Chila | train v1 (70/15/15) | Fine-tuning `indolem/indobertweet-base-uncased`, MAX_LENGTH=128, BATCH_SIZE=4, EPOCHS=1, LR=2e-5 | **0.7999** | **0.7889** | 🏆 Model Transformer terbaik pada dataset utama; training CPU selama 62 menit 26 detik |
+| 19 Nov 2026 | IndoBERTweet | Chila | train v1 (70/15/15) | Fine-tuning `indolem/indobertweet-base-uncased`, MAX_LENGTH=128, BATCH_SIZE=4, EPOCHS=1, LR=2e-5 | 0.7999 | 0.7889 | Evaluasi awal oleh Chila; training CPU 62 menit 26 detik |
+| 25 Nov 2026 | IndoBERTweet | Linda | train v1 (70/15/15) | Re-run fine-tuning produksi `indolem/indobertweet-base-uncased` untuk deployment web | **0.8024** | **0.7979** | 🏆 Skor tertinggi dataset utama (Akurasi Val 79,34%, Test 79,15%) |
 
 ## **3. Evaluasi Lintas Domain EmoT (Model Klasik & Transformer)**
 
