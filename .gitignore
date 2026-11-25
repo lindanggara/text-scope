@@ -60,3 +60,6 @@ Thumbs.db
 
 # Logs
 *.log
+backend/models/indobert/
+backend/models/indobertweet/
+backup_*/

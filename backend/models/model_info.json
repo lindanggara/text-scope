@@ -2,7 +2,7 @@
   "active_model": "LogReg Tuned",
   "description": "Logistic Regression dengan fitur TF-IDF kata + TF-IDF karakter, normalisasi kata gaul, dan class weighting. Hyperparameter dipilih dengan GridSearch (C = 1.0).",
   "trained_by": "Linda",
-  "trained_at": "3 Nov 2026",
+  "trained_at": "25 Nov 2026",
   "metrics": {
     "macro_f1_valid": 0.7312,
     "macro_f1_test": 0.7286,

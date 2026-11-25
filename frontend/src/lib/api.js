@@ -117,3 +117,15 @@ export async function getModelInfo() {
   if (USE_MOCK) throw new Error('Info model hanya tersedia saat dashboard terhubung ke backend (VITE_USE_MOCK=false).')
   return request('/admin/model-info')
 }
+
+export async function getModels() {
+  return request('/admin/models')
+}
+
+export async function setActiveModel(id) {
+  return request('/admin/models/aktif', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  })
+}

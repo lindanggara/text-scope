@@ -17,6 +17,7 @@ const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard.jsx'))
 const KelolaPengguna = lazy(() => import('./pages/admin/KelolaPengguna.jsx'))
 const LaporanSalah = lazy(() => import('./pages/admin/LaporanSalah.jsx'))
 const InfoModel = lazy(() => import('./pages/admin/InfoModel.jsx'))
+const ModelSelector = lazy(() => import('./pages/admin/ModelSelector.jsx'))
 
 // Halaman Hasil hanya bisa dibuka kalau sudah ada hasil analisis.
 function RequireResult({ children }) {
@@ -48,6 +49,7 @@ export default function App() {
             <Route path="pengguna" element={<KelolaPengguna />} />
             <Route path="laporan" element={<LaporanSalah />} />
             <Route path="model" element={<InfoModel />} />
+            <Route path="model/pilih" element={<ModelSelector />} />
           </Route>
         </Route>
       </Route>

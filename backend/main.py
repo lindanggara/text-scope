@@ -116,11 +116,80 @@ def model_info(user: User = Depends(require_admin)):
         logger.warning("model_info.json tidak terbaca: %s", exc)
         info = {}
 
+    reg = _predictor_mod.get_registry()
+    aktif_id = reg.get("aktif")
+    aktif_meta = next((m for m in reg.get("model", []) if m.get("id") == aktif_id), None)
+    if aktif_meta:
+        info["active_model"] = aktif_meta.get("nama", info.get("active_model"))
+        info["description"] = aktif_meta.get("deskripsi", info.get("description"))
+        pkl_path = os.path.join(os.path.dirname(__file__), aktif_meta.get("path", ""))
+        if os.path.exists(pkl_path):
+            from datetime import datetime
+            bulan_id = ["", "Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
+            dt = datetime.fromtimestamp(os.path.getmtime(pkl_path))
+            info["trained_at"] = f"{dt.day} {bulan_id[dt.month]} {dt.year}"
+        info.setdefault("metrics", {})
+        if aktif_meta.get("f1_test") is not None:
+            info["metrics"]["macro_f1_test"] = aktif_meta["f1_test"]
+        info["metrics"]["macro_f1_emot"] = aktif_meta.get("f1_emot")
+        if aktif_id != "logreg_tuned":
+            info["metrics"]["recall_emot"] = None
+        for row in info.get("comparison", []):
+            if row.get("model", "").lower() == aktif_meta.get("nama", "").lower():
+                if row.get("macro_f1_valid") is not None:
+                    info["metrics"]["macro_f1_valid"] = row["macro_f1_valid"]
+
     model = state["predictor"].model
+    steps_info = []
+    clf_label = type(model).__name__
+    clf_detail = "Pipeline scikit-learn"
+    feat_word = {"title": "TfidfVectorizer", "sub": "N-gram kata"}
+    feat_char = {"title": "Tidak digunakan", "sub": "Hanya fitur kata"}
+
+    if hasattr(model, "named_steps"):
+        steps_info = list(model.named_steps.keys())
+        clf_obj = model.named_steps.get("clf") or list(model.named_steps.values())[-1]
+        base_clf = getattr(clf_obj, "estimator", clf_obj)
+        clf_label = type(base_clf).__name__
+        params = []
+        if hasattr(base_clf, "C"):
+            params.append(f"C = {base_clf.C}")
+        if hasattr(base_clf, "alpha"):
+            params.append(f"alpha = {base_clf.alpha}")
+        if getattr(base_clf, "class_weight", None):
+            params.append(f"class_weight = {base_clf.class_weight}")
+        clf_detail = " · ".join(params) if params else "Parameter default"
+
+        vec_obj = model.named_steps.get("features") or model.named_steps.get("tfidf") or model.named_steps.get("vec")
+        if hasattr(vec_obj, "transformer_list"):
+            for name, trans in vec_obj.transformer_list:
+                mf = getattr(trans, "max_features", None)
+                ng = getattr(trans, "ngram_range", None)
+                if "word" in name:
+                    feat_word = {
+                        "title": f"{type(trans).__name__} · {mf:,} fitur".replace(",", ".") if mf else type(trans).__name__,
+                        "sub": f"N-gram kata {ng}" if ng else "Fitur kata"
+                    }
+                elif "char" in name:
+                    feat_char = {
+                        "title": f"{type(trans).__name__} · {mf:,} fitur".replace(",", ".") if mf else type(trans).__name__,
+                        "sub": f"N-gram karakter {ng}" if ng else "Fitur karakter"
+                    }
+        elif vec_obj is not None:
+            mf = getattr(vec_obj, "max_features", None)
+            ng = getattr(vec_obj, "ngram_range", None)
+            feat_word = {
+                "title": f"{type(vec_obj).__name__} · {mf:,} fitur".replace(",", ".") if mf else type(vec_obj).__name__,
+                "sub": f"N-gram kata {ng}" if ng else "Fitur kata"
+            }
+
     runtime = {
-        "type": type(model).__name__,
+        "type": clf_label,
+        "clf_detail": clf_detail,
+        "feat_word": feat_word,
+        "feat_char": feat_char,
         "classes": state["predictor"].classes,
-        "steps": [],
+        "steps": steps_info,
         "settings": {
             "max_rows": MAX_ROWS,
             "min_words": MIN_WORDS,
@@ -278,3 +347,28 @@ async def analyze(
             for i in range(total)
         ],
     }
+# ============================================================
+# Model Selector (Tambahan)
+# ============================================================
+from services import predictor as _predictor_mod
+
+class _SetModelRequest(BaseModel):
+    id: str
+
+@app.get("/admin/models")
+def list_models(user: User = Depends(require_admin)):
+    """Daftar semua model yang tersedia di registry."""
+    return _predictor_mod.get_registry()
+
+@app.post("/admin/models/aktif")
+def set_active_model(body: _SetModelRequest, user: User = Depends(require_admin)):
+    """Ubah model yang aktif digunakan untuk analisis."""
+    try:
+        aktif = _predictor_mod.set_aktif(body.id)
+        if "predictor" in state and hasattr(state["predictor"], "reload"):
+            state["predictor"].reload()
+        else:
+            state["predictor"] = _predictor_mod.Predictor()
+        return {"status": "success", "aktif": aktif}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

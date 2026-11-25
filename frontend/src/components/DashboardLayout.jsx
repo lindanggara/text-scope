@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
-  BarChart3, BookOpen, BrainCircuit, Flag, History, LayoutDashboard, Loader2, Lock, LogIn, LogOut,
+  BarChart3, BookOpen, BrainCircuit, Cpu, Flag, History, LayoutDashboard, Loader2, Lock, LogIn, LogOut,
   PanelLeftClose, PanelLeftOpen, TrendingUp, Upload, UserRound, Users,
 } from 'lucide-react'
 import Logo, { LensMark } from './Logo.jsx'
@@ -273,7 +273,8 @@ export default function DashboardLayout() {
                   <NavItem to="/admin" end icon={LayoutDashboard} label="Dashboard Admin" collapsed={isCollapsed} />
                   <NavItem to="/admin/pengguna" icon={Users} label="Kelola Pengguna" collapsed={isCollapsed} />
                   <NavItem to="/admin/laporan" icon={Flag} label="Laporan Salah" collapsed={isCollapsed} />
-                  <NavItem to="/admin/model" icon={BrainCircuit} label="Info Model" collapsed={isCollapsed} />
+                  <NavItem to="/admin/model" end icon={BrainCircuit} label="Info Model" collapsed={isCollapsed} />
+                  <NavItem to="/admin/model/pilih" icon={Cpu} label="Pilih Model" collapsed={isCollapsed} />
                 </>
               )}
             </>

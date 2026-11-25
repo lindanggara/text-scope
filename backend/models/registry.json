@@ -1,0 +1,45 @@
+{
+    "aktif":  "logreg_tuned",
+    "model":  {
+                  "logreg_baseline":  {
+                                          "nama":  "LogReg Baseline",
+                                          "tipe":  "sklearn",
+                                          "path":  "models/logreg_baseline.pkl",
+                                          "f1_test":  0.702,
+                                          "f1_emot":  null,
+                                          "deskripsi":  "Logistic Regression dasar + TF-IDF kata"
+                                      },
+                  "logreg_tuned":  {
+                                       "nama":  "LogReg Tuned",
+                                       "tipe":  "sklearn",
+                                       "path":  "models/logreg_tuned.pkl",
+                                       "f1_test":  0.7268,
+                                       "f1_emot":  0.4142,
+                                       "deskripsi":  "Logistic Regression + TF-IDF kata \u0026 karakter, C=1.0"
+                                   },
+                  "svm_tuned":  {
+                                    "nama":  "SVM Tuned",
+                                    "tipe":  "sklearn",
+                                    "path":  "models/svm_tuned.pkl",
+                                    "f1_test":  0.7218,
+                                    "f1_emot":  null,
+                                    "deskripsi":  "Support Vector Machine + TF-IDF kata \u0026 karakter"
+                                },
+                  "nb_tuned":  {
+                                   "nama":  "Naive Bayes",
+                                   "tipe":  "sklearn",
+                                   "path":  "models/nb_tuned.pkl",
+                                   "f1_test":  0.6719,
+                                   "f1_emot":  null,
+                                   "deskripsi":  "Complement Naive Bayes + TF-IDF"
+                               },
+                  "indobert":  {
+                                   "nama":  "IndoBERT",
+                                   "tipe":  "transformer",
+                                   "path":  "models/indobert",
+                                   "f1_test":  0.7707,
+                                   "f1_emot":  0.4166,
+                                   "deskripsi":  "Fine-tuned indobenchmark/indobert-base-p1 (max_length 128)"
+                               }
+              }
+}
