@@ -242,7 +242,9 @@ def read_table(file: UploadFile) -> pd.DataFrame:
         raise HTTPException(status_code=400, detail="File harus .csv atau .xlsx")
     try:
         if filename.endswith(".csv"):
-            raw = file.file.read()\n            if len(raw) > int(MAX_UPLOAD_MB * 1024 * 1024):\n                raise HTTPException(status_code=400, detail=f"Ukuran file melebihi batas {MAX_UPLOAD_MB:g} MB.")
+            raw = file.file.read()
+            if len(raw) > int(MAX_UPLOAD_MB * 1024 * 1024):
+                raise HTTPException(status_code=400, detail=f"Ukuran file melebihi batas {MAX_UPLOAD_MB:g} MB.")
             # utf-8-sig: buang BOM dari file ekspor Excel; cp1252 untuk CSV lama yang bukan UTF-8.
             # keep_default_na=False: teks seperti "NA"/"null" tetap dianggap komentar (sama dengan dashboard).
             for enc in ("utf-8-sig", "cp1252"):
@@ -251,7 +253,10 @@ def read_table(file: UploadFile) -> pd.DataFrame:
                 except UnicodeDecodeError:
                     continue
             raise HTTPException(status_code=400, detail="File CSV tidak bisa dibaca. Simpan ulang dengan encoding UTF-8.")
-        raw = file.file.read()\n        if len(raw) > int(MAX_UPLOAD_MB * 1024 * 1024):\n            raise HTTPException(status_code=400, detail=f"Ukuran file melebihi batas {MAX_UPLOAD_MB:g} MB.")\n        return pd.read_excel(io.BytesIO(raw), engine="openpyxl", keep_default_na=False, na_values=[""])
+        raw = file.file.read()
+        if len(raw) > int(MAX_UPLOAD_MB * 1024 * 1024):
+            raise HTTPException(status_code=400, detail=f"Ukuran file melebihi batas {MAX_UPLOAD_MB:g} MB.")
+        return pd.read_excel(io.BytesIO(raw), engine="openpyxl", keep_default_na=False, na_values=[""])
     except HTTPException:
         raise
     except Exception as e:
