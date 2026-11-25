@@ -6,7 +6,6 @@ import numpy as np
 
 LABELS = ["anger", "fear", "joy", "love", "sad", "neutral"]
 
-# Pemetaan semua variasi label (Indonesia / HuggingFace ID / Inggris) ke standar Inggris TextScope
 LABEL_MAP = {
     "anger": "anger",
     "marah": "anger",
@@ -28,10 +27,22 @@ LABEL_MAP = {
     "label_5": "neutral",
 }
 
+TEMPERATURE = max(float(os.getenv("CONFIDENCE_TEMPERATURE", "1.0")), 0.1)
+SINGLE_CACHE = os.getenv("SINGLE_MODEL_CACHE", "true").lower() == "true"
+
 
 def _norm_label(raw_label: str) -> str:
     key = str(raw_label).strip().lower()
     return LABEL_MAP.get(key, key)
+
+
+def _calibrate_proba(raw_proba: np.ndarray) -> np.ndarray:
+    """Kalibrasi ringan distribusi probabilitas agar skor confidence lebih terukur."""
+    arr = np.clip(np.asarray(raw_proba, dtype=float), 1e-6, 1.0)
+    if abs(TEMPERATURE - 1.0) < 1e-6:
+        return arr / arr.sum()
+    scaled = np.power(arr, 1.0 / TEMPERATURE)
+    return scaled / scaled.sum()
 
 
 _BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -64,13 +75,15 @@ def set_aktif(nama):
 
 
 class Predictor:
-    """Predictor dengan dukungan registry model (sklearn & transformer)."""
+    """Predictor dengan dukungan registry model (sklearn & transformer) & kalibrasi."""
 
     def __init__(self, model_path: str = None):
         self._cache = {}
         self.reload(model_path)
 
     def reload(self, model_path: str = None):
+        if SINGLE_CACHE:
+            self._cache.clear()
         if model_path:
             self.model = self._load_sklearn(model_path)
             self.classes = [_norm_label(c) for c in getattr(self.model, "classes_", [])]
@@ -105,6 +118,8 @@ class Predictor:
     def _get_model_for(self, nama):
         if nama in self._cache:
             return self._cache[nama]
+        if SINGLE_CACHE:
+            self._cache.clear()
         reg = _load_registry()
         info = reg["model"][nama]
         path = os.path.join(_BASE, info["path"])
@@ -127,7 +142,7 @@ class Predictor:
             model = m["obj"]
             classes = [_norm_label(c) for c in getattr(model, "classes_", [])]
             if hasattr(model, "predict_proba"):
-                proba = model.predict_proba([text])[0]
+                proba = _calibrate_proba(model.predict_proba([text])[0])
                 idx = int(np.argmax(proba))
                 probabilities = {classes[i]: round(float(p), 4) for i, p in enumerate(proba)}
                 return classes[idx], float(proba[idx]), probabilities
@@ -141,14 +156,13 @@ class Predictor:
         t_labels = m["obj"]["labels"]
         inputs = tok(text, return_tensors="pt", truncation=True, max_length=128)
         with torch.no_grad():
-            logits = model(**inputs).logits
+            logits = model(**inputs).logits / TEMPERATURE
         proba = torch.softmax(logits, dim=-1)[0].tolist()
         idx = int(np.argmax(proba))
         probabilities = {t_labels[i]: round(float(p), 4) for i, p in enumerate(proba)}
         return t_labels[idx], float(proba[idx]), probabilities
 
     def predict(self, text: str):
-        """Prediksi satu teks. Kembalikan label, confidence, dan probabilitas semua emosi."""
         return self._predict_one(text)
 
     def predict_batch(self, texts):
@@ -161,7 +175,8 @@ class Predictor:
             model = m["obj"]
             labels = [_norm_label(l) for l in model.predict(texts)]
             if hasattr(model, "predict_proba"):
-                confidences = model.predict_proba(texts).max(axis=1).tolist()
+                probs = np.vstack([_calibrate_proba(row) for row in model.predict_proba(texts)])
+                confidences = probs.max(axis=1).tolist()
             else:
                 confidences = [1.0] * len(texts)
             return [{"label": l, "confidence": float(c)} for l, c in zip(labels, confidences)]

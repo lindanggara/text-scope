@@ -10,7 +10,7 @@ import joblib
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import f1_score
+from sklearn.metrics import classification_report, confusion_matrix, f1_score
 from sklearn.naive_bayes import ComplementNB
 from sklearn.pipeline import FeatureUnion, Pipeline
 from sklearn.svm import SVC
@@ -25,7 +25,8 @@ MODELS = ROOT / "models"
 BACKEND_MODELS = ROOT / "backend" / "models"
 REPORTS = ROOT / "reports" / "results"
 
-LABELS = {"anger", "fear", "joy", "love", "sad", "neutral"}
+LABELS = ["anger", "fear", "joy", "love", "sad", "neutral"]
+LABEL_SET = set(LABELS)
 
 
 def read_csv_checked(path):
@@ -40,7 +41,7 @@ def read_csv_checked(path):
     df = df[["text", "label"]].dropna().copy()
     df["text"] = df["text"].astype(str).str.strip()
     df["label"] = df["label"].astype(str).str.strip().str.lower()
-    df = df[(df["text"] != "") & df["label"].isin(LABELS)]
+    df = df[(df["text"] != "") & df["label"].isin(LABEL_SET)]
 
     if df.empty:
         raise ValueError(f"Tidak ada data valid pada {path}")
@@ -81,6 +82,12 @@ def merge_feedback(feedback_path):
     train = read_csv_checked(train_path)
     feedback = read_csv_checked(feedback_path)
 
+    if len(feedback) < 20:
+        print(
+            f"[PERINGATAN] Jumlah data feedback hanya {len(feedback)} baris (< 20). "
+            "Retraining dengan data sedikit berisiko memicu overfitting lokal."
+        )
+
     original_count = len(train)
 
     combined = pd.concat([train, feedback], ignore_index=True)
@@ -110,6 +117,29 @@ def merge_feedback(feedback_path):
         )
 
     return train, combined, len(feedback), len(combined) - original_count
+
+
+def save_evaluation_artifacts(model_id, y_true, y_pred):
+    REPORTS.mkdir(parents=True, exist_ok=True)
+    rep = classification_report(
+        y_true, y_pred, labels=LABELS, output_dict=True, zero_division=0
+    )
+    rows = []
+    for lbl in LABELS:
+        m = rep.get(lbl, {})
+        rows.append({
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "model": model_id,
+            "label": lbl,
+            "precision": round(float(m.get("precision", 0.0)), 4),
+            "recall": round(float(m.get("recall", 0.0)), 4),
+            "f1": round(float(m.get("f1-score", 0.0)), 4),
+            "support": int(m.get("support", 0)),
+        })
+    pd.DataFrame(rows).to_csv(REPORTS / "latest_per_class_f1.csv", index=False)
+
+    cm = confusion_matrix(y_true, y_pred, labels=LABELS)
+    pd.DataFrame(cm, index=LABELS, columns=LABELS).to_csv(REPORTS / "latest_confusion_matrix.csv")
 
 
 def build_pipeline(model_id):
@@ -174,12 +204,12 @@ def train_classical(model_id, train, valid, test):
 
     model.fit(x_train, train["label"])
 
-    valid_score = f1_score(
-        valid["label"], model.predict(x_valid), average="macro"
-    )
-    test_score = f1_score(
-        test["label"], model.predict(x_test), average="macro"
-    )
+    valid_preds = model.predict(x_valid)
+    test_preds = model.predict(x_test)
+
+    valid_score = f1_score(valid["label"], valid_preds, average="macro")
+    test_score = f1_score(test["label"], test_preds, average="macro")
+    save_evaluation_artifacts(model_id, test["label"].tolist(), list(test_preds))
 
     return model, round(float(valid_score), 4), round(float(test_score), 4)
 
@@ -195,9 +225,8 @@ def train_transformer(model_id, train, valid, test, epochs, lr):
         TrainingArguments,
     )
 
-    label_list = ["anger", "fear", "joy", "love", "sad", "neutral"]
-    label2id = {label: i for i, label in enumerate(label_list)}
-    id2label = {i: label for i, label in enumerate(label_list)}
+    label2id = {label: i for i, label in enumerate(LABELS)}
+    id2label = {i: label for i, label in enumerate(LABELS)}
 
     base_dir = BACKEND_MODELS / model_id
     if not base_dir.exists():
@@ -209,7 +238,7 @@ def train_transformer(model_id, train, valid, test, epochs, lr):
     tokenizer = AutoTokenizer.from_pretrained(str(base_dir))
     model = AutoModelForSequenceClassification.from_pretrained(
         str(base_dir),
-        num_labels=len(label_list),
+        num_labels=len(LABELS),
         id2label=id2label,
         label2id=label2id,
     )
@@ -270,15 +299,16 @@ def train_transformer(model_id, train, valid, test, epochs, lr):
     trainer.train()
 
     valid_result = trainer.evaluate(ds_valid)
-    test_result = trainer.evaluate(ds_test)
+    test_pred_out = trainer.predict(ds_test)
+    test_preds = [LABELS[int(i)] for i in np.argmax(test_pred_out.predictions, axis=-1)]
+    test_score = f1_score(test["label"].tolist(), test_preds, average="macro")
+    save_evaluation_artifacts(model_id, test["label"].tolist(), test_preds)
 
     return (
         trainer.model,
         tokenizer,
         output_dir,
-    ), round(float(valid_result["eval_macro_f1"]), 4), round(
-        float(test_result["eval_macro_f1"]), 4
-    )
+    ), round(float(valid_result["eval_macro_f1"]), 4), round(float(test_score), 4)
 
 
 def save_registry(registry_path, model_id, score):

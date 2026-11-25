@@ -1,13 +1,12 @@
 import { Loader2 } from 'lucide-react'
 
 const STYLE = {
-  checking: { bg: '#ECE6FB', dot: '#6B5DC2', text: 'Mengecek server…' },
+  checking: { bg: '#ECE6FB', dot: '#6B5DC2', text: 'Mengecek server...' },
   ready: { bg: '#DFF3EA', dot: '#1BAF7A', text: 'Server siap' },
-  waking: { bg: '#FFF2D2', dot: '#C98A00', text: 'Menyiapkan server, bisa butuh hingga 1 menit…' },
+  waking: { bg: '#FFF2D2', dot: '#C98A00', text: 'Menyiapkan server, bisa butuh hingga 1 menit...' },
   offline: { bg: '#FDE3E3', dot: '#E34948', text: 'Server belum bisa dihubungi. Coba muat ulang halaman nanti.' },
 }
 
-// Penanda kecil status backend di halaman Analisis.
 export default function ServerStatus({ status }) {
   const s = STYLE[status] ?? STYLE.checking
   const busy = status === 'checking' || status === 'waking'
