@@ -89,6 +89,10 @@ class PredictResponse(BaseModel):
     text_anonymized: str
 
 
+@app.get("/")
+def root():
+    return {"status": "ok", "service": "TextScope API", "docs": "/docs", "ui": "/ui", "health": "/health"}
+
 @app.get("/health")
 def health():
     return {"status": "ok", "auth": auth.AUTH_ENABLED}
