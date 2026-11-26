@@ -1,5 +1,7 @@
+import os
 import logging
 import traceback
+import uvicorn
 import gradio as gr
 
 logging.basicConfig(level=logging.INFO)
@@ -18,3 +20,7 @@ with gr.Blocks(title="TextScope API") as demo:
     )
 
 app = gr.mount_gradio_app(fastapi_app, demo, path="/ui")
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", "7860"))
+    uvicorn.run(app, host="0.0.0.0", port=port)
